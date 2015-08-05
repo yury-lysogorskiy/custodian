@@ -215,6 +215,8 @@ class VaspErrorHandler(ErrorHandler):
         if "zbrent" in self.errors:
             actions.append({"dict": "INCAR",
                             "action": {"_set": {"IBRION": 1}}})
+            actions.append({"file": "CONTCAR",
+                            "action": {"_file_copy": {"POSCAR"}}})
 
         if "too_few_bands" in self.errors:
             if "NBANDS" in vi["INCAR"]:
