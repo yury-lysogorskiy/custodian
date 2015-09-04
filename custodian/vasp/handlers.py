@@ -568,7 +568,7 @@ class FrozenJobErrorHandler(ErrorHandler):
                 default redirect used by :class:`custodian.vasp.jobs.VaspJob`.
             timeout (int): The time in seconds between checks where if there
                 is no activity on the output file, the run is considered
-                frozen. Defaults to 3600 seconds, i.e., 1 hour.
+                frozen. Defaults to 21600 seconds, i.e., 6 hour.
         """
         self.output_filename = output_filename
         self.timeout = timeout
@@ -586,6 +586,9 @@ class FrozenJobErrorHandler(ErrorHandler):
         if vi["INCAR"].get("ALGO", "Normal") == "Fast":
             actions.append({"dict": "INCAR",
                         "action": {"_set": {"ALGO": "Normal"}}})
+        elif vi["INCAR"].get("ALGO", "Normal") == "Normal":
+            actions.append({"dict": "INCAR",
+                        "action": {"_set": {"SYMPREC": 1e-8}}})
 
         VaspModder(vi=vi).apply_actions(actions)
 
