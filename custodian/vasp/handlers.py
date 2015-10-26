@@ -666,6 +666,12 @@ class NonConvergingErrorHandler(ErrorHandler):
                                 "action": {"_set": {"AMIN": 0.01, "BMIX": 3.0,
                                                     "ICHARG": 2}}})
 
+            else:
+                #Try decreasing AMIX
+                backup(VASP_BACKUP_FILES)
+                actions.append({"dict": "INCAR",
+                                "action": {"_set": {"AMIX": 0.01}}})
+
         if actions:
             VaspModder(vi=vi).apply_actions(actions)
             return {"errors": ["Non-converging job"], "actions": actions}
