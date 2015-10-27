@@ -435,6 +435,11 @@ class UnconvergedErrorHandler(ErrorHandler):
 
     def correct(self):
         backup(VASP_BACKUP_FILES)
+        vi = VaspInput.from_directory(".")
+        algo = vi["INCAR"].get("ALGO", "Normal")
+        amix = vi["INCAR"].get("AMIX")
+
+
         actions = [{"file": "CONTCAR",
                     "action": {"_file_copy": {"dest": "POSCAR"}}},
                    {"dict": "INCAR",
@@ -444,6 +449,10 @@ class UnconvergedErrorHandler(ErrorHandler):
                                         "BMIX": 0.001,
                                         "AMIX_MAG": 0.8,
                                         "BMIX_MAG": 0.001}}}]
+
+        if algo == "Normal" and amix >= 0.2:
+            actions[1]["action"]["_set"]["AMIX"] = amix/2
+
         VaspModder().apply_actions(actions)
         return {"errors": ["Unconverged"], "actions": actions}
 
