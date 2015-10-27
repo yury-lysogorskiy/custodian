@@ -450,8 +450,8 @@ class UnconvergedErrorHandler(ErrorHandler):
                                         "AMIX_MAG": 0.8,
                                         "BMIX_MAG": 0.001}}}]
 
-        if algo == "Normal" and amix <= 0.3:
-            actions[1]["action"]["_set"]["AMIX"] = amix*1.5
+        if algo == "Normal":
+            actions[1]["action"]["_set"]["ISYM"] = 0
 
         VaspModder().apply_actions(actions)
         return {"errors": ["Unconverged"], "actions": actions}
