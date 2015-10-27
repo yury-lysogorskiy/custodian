@@ -450,8 +450,9 @@ class UnconvergedErrorHandler(ErrorHandler):
                                         "AMIX_MAG": 0.8,
                                         "BMIX_MAG": 0.001}}}]
 
-        if algo == "Normal":
-            actions[1]["action"]["_set"]["ISYM"] = 0
+        if algo == "Normal" and amix <= 0.3:
+            # seems to converge after copying contcar 4 times for a Pt atom
+            actions[1]["action"]["_set"]["AMIX"] = amix*1.5
 
         VaspModder().apply_actions(actions)
         return {"errors": ["Unconverged"], "actions": actions}
