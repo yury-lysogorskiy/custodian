@@ -417,7 +417,6 @@ class UnconvergedErrorHandler(ErrorHandler):
     def __init__(self, output_filename="vasprun.xml"):
         """
         Initializes the handler with the output file to check.
-
         Args:
             output_vasprun (str): Filename for the vasprun.xml file. Change
                 this only if it is different from the default (unlikely).
@@ -435,11 +434,6 @@ class UnconvergedErrorHandler(ErrorHandler):
 
     def correct(self):
         backup(VASP_BACKUP_FILES)
-        vi = VaspInput.from_directory(".")
-        algo = vi["INCAR"].get("ALGO", "Normal")
-        amix = vi["INCAR"].get("AMIX")
-
-
         actions = [{"file": "CONTCAR",
                     "action": {"_file_copy": {"dest": "POSCAR"}}},
                    {"dict": "INCAR",
@@ -449,11 +443,6 @@ class UnconvergedErrorHandler(ErrorHandler):
                                         "BMIX": 0.001,
                                         "AMIX_MAG": 0.8,
                                         "BMIX_MAG": 0.001}}}]
-
-        if algo == "Normal" and amix <= 0.3:
-            # seems to converge after copying contcar 4 times for a Pt atom
-            actions[1]["action"]["_set"]["AMIX"] = amix*1.5
-
         VaspModder().apply_actions(actions)
         return {"errors": ["Unconverged"], "actions": actions}
 
@@ -618,7 +607,6 @@ class NonConvergingErrorHandler(ErrorHandler):
                  change_algo=False):
         """
         Initializes the handler with the output file to check.
-
         Args:
             output_filename (str): This is the OSZICAR file. Change
                 this only if it is different from the default (unlikely).
@@ -675,12 +663,6 @@ class NonConvergingErrorHandler(ErrorHandler):
                 actions.append({"dict": "INCAR",
                                 "action": {"_set": {"AMIN": 0.01, "BMIX": 3.0,
                                                     "ICHARG": 2}}})
-
-            else:
-                #Try decreasing AMIX
-                backup(VASP_BACKUP_FILES)
-                actions.append({"dict": "INCAR",
-                                "action": {"_set": {"AMIX": 0.01}}})
 
         if actions:
             VaspModder(vi=vi).apply_actions(actions)
