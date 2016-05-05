@@ -213,8 +213,14 @@ class VaspErrorHandler(ErrorHandler):
                             "action": {"_set": {"POTIM": potim}}})
 
         if "zbrent" in self.errors:
-            actions.append({"dict": "INCAR",
-                            "action": {"_set": {"IBRION": 1}}})
+            vi = VaspInput.from_directory(".")
+            ibrion = vi["INCAR"].get("IBRION")
+            if ibrion == 2:
+                actions.append({"dict": "INCAR",
+                                "action": {"_set": {"IBRION": 1}}})
+            elif ibrion == 1:
+                actions.append({"file": "CONTCAR",
+                                "action": {"_file_copy": {"POSCAR"}}})
 
         if "too_few_bands" in self.errors:
             if "NBANDS" in vi["INCAR"]:
@@ -398,7 +404,7 @@ class MeshSymmetryErrorHandler(ErrorHandler):
         vi = VaspInput.from_directory(".")
         m = reduce(operator.mul, vi["KPOINTS"].kpts[0])
         m = max(int(round(m ** (1 / 3))), 1)
-        if vi["KPOINTS"].style.name.lower().startswith("m"):
+        if vi["KPOINTS"].style.lower().startswith("m"):
             m += m % 2
         actions = [{"dict": "KPOINTS",
                     "action": {"_set": {"kpoints": [[m] * 3]}}}]
@@ -415,7 +421,6 @@ class UnconvergedErrorHandler(ErrorHandler):
     def __init__(self, output_filename="vasprun.xml"):
         """
         Initializes the handler with the output file to check.
-
         Args:
             output_vasprun (str): Filename for the vasprun.xml file. Change
                 this only if it is different from the default (unlikely).
@@ -482,11 +487,10 @@ class MaxForceErrorHandler(ErrorHandler):
         backup(VASP_BACKUP_FILES | {self.output_filename})
         vi = VaspInput.from_directory(".")
         ediff = float(vi["INCAR"].get("EDIFF", 1e-4))
-        ediffg = float(vi["INCAR"].get("EDIFFG", ediff * 10))
         actions = [{"file": "CONTCAR",
                     "action": {"_file_copy": {"dest": "POSCAR"}}},
                    {"dict": "INCAR",
-                    "action": {"_set": {"EDIFFG": ediffg*0.5}}}]
+                    "action": {"_set": {"EDIFF": ediff*0.75}}}]
         VaspModder(vi=vi).apply_actions(actions)
 
         return {"errors": ["MaxForce"], "actions": actions}
@@ -537,6 +541,9 @@ class PotimErrorHandler(ErrorHandler):
             actions = [{"dict": "INCAR",
                         "action": {"_set": {"IBRION": 3,
                                             "SMASS": 0.75}}}]
+        elif potim < 0.1:
+            actions = [{"dict": "INCAR",
+                        "action": {"_set": {"SYMPREC": 1e-8}}}]
         else:
             actions = [{"dict": "INCAR",
                         "action": {"_set": {"POTIM": potim * 0.5}}}]
@@ -564,7 +571,7 @@ class FrozenJobErrorHandler(ErrorHandler):
                 default redirect used by :class:`custodian.vasp.jobs.VaspJob`.
             timeout (int): The time in seconds between checks where if there
                 is no activity on the output file, the run is considered
-                frozen. Defaults to 3600 seconds, i.e., 1 hour.
+                frozen. Defaults to 21600 seconds, i.e., 6 hour.
         """
         self.output_filename = output_filename
         self.timeout = timeout
@@ -579,9 +586,13 @@ class FrozenJobErrorHandler(ErrorHandler):
 
         vi = VaspInput.from_directory('.')
         actions = []
+
         if vi["INCAR"].get("ALGO", "Normal") == "Fast":
             actions.append({"dict": "INCAR",
                         "action": {"_set": {"ALGO": "Normal"}}})
+        else:
+            actions.append({"dict": "INCAR",
+                        "action": {"_set": {"SYMPREC": 1e-8}}})
 
         VaspModder(vi=vi).apply_actions(actions)
 
@@ -600,7 +611,6 @@ class NonConvergingErrorHandler(ErrorHandler):
                  change_algo=False):
         """
         Initializes the handler with the output file to check.
-
         Args:
             output_filename (str): This is the OSZICAR file. Change
                 this only if it is different from the default (unlikely).
@@ -789,7 +799,7 @@ class WalltimeHandler(ErrorHandler):
 class PBSWalltimeHandler(WalltimeHandler):
 
     def __init__(self, buffer_time=300):
-        super(PBSWalltimeHandler, self).__init__(None, buffer_time=buffer_time)
+        WalltimeHandler.__init__(self, None, buffer_time=buffer_time)
 
 
 class CheckpointHandler(ErrorHandler):
@@ -932,5 +942,11 @@ class PositiveEnergyErrorHandler(ErrorHandler):
             VaspModder(vi=vi).apply_actions(actions)
             return {"errors": ["Positive energy"], "actions": actions}
         #Unfixable error. Just return None for actions.
+        elif algo == 'Normal':
+            potim = float(vi["INCAR"].get("POTIM", 0.5)) / 2.0
+            actions = [{"dict": "INCAR",
+                        "action": {"_set": {"POTIM": potim}}}]
+            VaspModder(vi=vi).apply_actions(actions)
+            return {"errors": ["Positive energy"], "actions": actions}
         else:
             return {"errors": ["Positive energy"], "actions": None}
