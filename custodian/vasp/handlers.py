@@ -647,6 +647,7 @@ class NonConvergingErrorHandler(ErrorHandler):
         amix = vi["INCAR"].get("AMIX", 0.4)
         bmix = vi["INCAR"].get("BMIX", 1.0)
         amin = vi["INCAR"].get("AMIN", 0.1)
+        ediff = vi["INCAR"].get("EDIFF", 1e-06)
         actions = []
         if self.change_algo:
             if algo == "Fast":
@@ -667,6 +668,11 @@ class NonConvergingErrorHandler(ErrorHandler):
                 actions.append({"dict": "INCAR",
                                 "action": {"_set": {"AMIN": 0.01, "BMIX": 3.0,
                                                     "ICHARG": 2}}})
+            elif ediff == 1e-06:
+                # As a last resort, change the ediff
+                backup(VASP_BACKUP_FILES)
+                actions.append({"dict": "INCAR",
+                                "action": {"_set": {"EDIFF": ediff*10}}})
 
         if actions:
             VaspModder(vi=vi).apply_actions(actions)
